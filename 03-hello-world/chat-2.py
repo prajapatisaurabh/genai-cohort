@@ -9,42 +9,36 @@ client = OpenAI()
 # Chain Of Thought: The model is encouraged to break down reasoning step by step before arriving at an answer.
 
 SYSTEM_PROMPT = """
-    You are an helpfull AI assistant who is specialized in resolving user query.
-    For the given user input, analyse the input and break down the problem step by step.
+You are a helpful AI assistant that always explains your reasoning step by step before giving the final answer.
+This is called the Chain of Thought (CoT) technique.
 
-    The steps are you get a user input, you analyse, you think, you think again, and think for several times and then return the output with an explanation. 
+Instructions:
+1. When the user asks a question, first break it down into small steps.
+2. Write out your thought process clearly (like solving a puzzle step by step).
+3. After reasoning, provide the final answer in a simple and clear way.
+4. Always include both "reasoning" and "final_answer" in the JSON response.
 
-    Follow the steps in sequence that is "analyse", "think", "output", "validate" and finally "result".
+Output Format:
+{
+  "reasoning": "string",
+  "final_answer": "string"
+}
 
-    Rules:
-    1. Follow the strict JSON output as per schema.
-    2. Always perform one step at a time and wait for the next input.
-    3. Carefully analyse the user query,
+Example 1:
+Input: What is 12 * 3 + 6?
+Output: {
+  "reasoning": "First multiply 12 * 3 = 36. Then add 6. 36 + 6 = 42.",
+  "final_answer": "42"
+}
 
-    Output Format:
-    {{ "step": "string", "content": "string" }}
-
-    Example:
-    Input: What is 2 + 2
-    Output: {{ "step": "analyse", "content": "Alight! The user is interest in maths query and he is asking a basic arthematic operation" }}
-    Output: {{ "step": "think", "content": "To perform this addition, I must go from left to right and add all the operands." }}
-    Output: {{ "step": "output", "content": "4" }}
-    Output: {{ "step": "validate", "content": "Seems like 4 is correct ans for 2 + 2" }}
-    Output: {{ "step": "result", "content": "2 + 2 = 4 and this is calculated by adding all numbers" }}
-
-    Example:
-    Input: What is 2 + 2 * 5 / 3
-    Output: {{ "step": "analyse", "content": "Alight! The user is interest in maths query and he is asking a basic arthematic operations" }}
-    Output: {{ "step": "think", "content": "To perform this addition, I must use BODMAS rule" }}
-    Output: {{ "step": "validate", "content": "Correct, using BODMAS is the right approach here" }}
-    Output: {{ "step": "think", "content": "First I need to solve division that is 5 / 3 which gives 1.66666666667" }}
-    Output: {{ "step": "validate", "content": "Correct, using BODMAS the division must be performed" }}
-    Output: {{ "step": "think", "content": "Now as I have already solved 5 / 3 now the equation looks lik 2 + 2 * 1.6666666666667" }}
-    Output: {{ "step": "validate", "content": "Yes, The new equation is absolutely correct" }}
-    Output: {{ "step": "validate", "think": "The equation now is 2 + 3.33333333333" }}
-    and so on.....
-
+Example 2:
+Input: Tom has 10 pencils. He gives 3 to Mary and then buys 5 more. How many pencils does he have?
+Output: {
+  "reasoning": "Start with 10 pencils. Give away 3, so 10 - 3 = 7. Then add 5 new pencils: 7 + 5 = 12.",
+  "final_answer": "12"
+}
 """
+
 
 # response = client.chat.completions.create(
 #     model="gpt-4.1-mini",
@@ -70,7 +64,6 @@ messages = [
 
 query = input("> ")
 messages.append({ "role": "user", "content": query })
-
 while True:
     response = client.chat.completions.create(
         model="gpt-4.1",
@@ -81,14 +74,10 @@ while True:
     messages.append({ "role": "assistant", "content": response.choices[0].message.content })
     parsed_response = json.loads(response.choices[0].message.content)
 
-    if parsed_response.get("step") == "think":
-        # Make a Claude API Call and append the result as validate
-        messages.append({ "role": "assistant", "content": "<>" })
-        continue
+    # Handle Chain of Thought reasoning
+    if parsed_response.get("reasoning"):
+        print("          🧠 Reasoning:", parsed_response.get("reasoning"))
 
-    if parsed_response.get("step") != "result":
-        print("          🧠:", parsed_response.get("content"))
-        continue
-
-    print("🤖:", parsed_response.get("content"))
-    break
+    if parsed_response.get("final_answer"):
+        print("🤖 Final Answer:", parsed_response.get("final_answer"))
+        break
